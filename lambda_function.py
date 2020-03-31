@@ -12,7 +12,6 @@ def parse_int(n):
     except ValueError:
         return float("nan")
 
-
 def build_validation_result(is_valid, violated_slot, message_content):
     """
     Define a result message structured as Lex response.
@@ -26,14 +25,12 @@ def build_validation_result(is_valid, violated_slot, message_content):
         "message": {"contentType": "PlainText", "content": message_content},
     }
 
-
 ### Dialog Actions Helper Functions ###
 def get_slots(intent_request):
     """
     Fetch all the slots and their values from the current intent.
     """
     return intent_request["currentIntent"]["slots"]
-
 
 def elicit_slot(session_attributes, intent_name, slots, slot_to_elicit, message):
     """
@@ -51,7 +48,6 @@ def elicit_slot(session_attributes, intent_name, slots, slot_to_elicit, message)
         },
     }
 
-
 def delegate(session_attributes, slots):
     """
     Defines a delegate slot type response.
@@ -61,7 +57,6 @@ def delegate(session_attributes, slots):
         "sessionAttributes": session_attributes,
         "dialogAction": {"type": "Delegate", "slots": slots},
     }
-
 
 def close(session_attributes, fulfillment_state, message):
     """
@@ -79,7 +74,30 @@ def close(session_attributes, fulfillment_state, message):
 
     return response
 
+# Validation function
 
+def validation(age, investment_amount):
+    
+    if age is not None and (int(age) < 0 or int(age) > 65):
+        return build_validation_result(
+            False,
+            "age",
+            "You should be between the ages of 0 and 65 to use this service, please enter a different age.",
+        )
+    
+    if investment_amount is not None and (int(investment_amount) < 5000):
+        return build_validation_result(
+            False,
+            "investmentAmount",
+            "The minimum investment is $5000, please enter a different invetment amount.",
+        )
+    
+    return build_validation_result(
+        True,
+        None,
+        None,
+    )
+    
 ### Intents Handlers ###
 def recommend_portfolio(intent_request):
     """
@@ -95,42 +113,21 @@ def recommend_portfolio(intent_request):
     if source == "DialogCodeHook":
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt
-        # for the first violation detected.
 
         ### YOUR DATA VALIDATION CODE STARTS HERE ###
-        if age < 0 or age > 65:
-            return build_validation_result(
-                False,
-                "age",
-                "You should be between the ages of 0 and 65 to use this service, "
-                "please provide a different age.",
-            )
         
+        slots = get_slots(intent_request)
+        
+        validation_result = validation(age, investment_amount)
+        
+        if validation_result['isValid'] == False:
             return elicit_slot(
-                False,
-                "age",
-                "age",
-                "age",
-                "Please enter a different age.",
+                intent_request["sessionAttributes"],
+                intent_request["currentIntent"]["name"],
+                slots,
+                validation_result["violatedSlot"],
+                validation_result["message"],
             )
-        
-        if investment_amount < 5000:
-            return build_validation_result(
-                False,
-                "investmentAmount",
-                "The minimum investment is $5000, "
-                "please provide a different invetment amount.",
-            )
-        
-            return elicit_slot(
-                False,
-                "investmentAmount",
-                "investmentAmount",
-                "investmentAmount",
-                "Please enter a different investment amount.",
-            )
-        
-        return build_validation_result(True, None, None)
 
         ### YOUR DATA VALIDATION CODE ENDS HERE ###
 
@@ -142,41 +139,19 @@ def recommend_portfolio(intent_request):
     # Get the initial investment recommendation
 
     ### YOUR FINAL INVESTMENT RECOMMENDATION CODE STARTS HERE ###
-    
-    if source == "DialogCodeHook":
+
+    initial_recommendation = ""
         
-        if risk_level == "None":
-            return build_validation_result(
-                    True,
-                    "risk_level",
-                    "100% bonds (AGG), 0% equities (SPY)",
-            )
-        elif risk_level == "Very Low":
-            return build_validation_result(
-                    True,
-                    "risk_level",
-                    "80% bonds (AGG), 20% equities (SPY)",
-            )
-        elif risk_level == "Low":
-            return build_validation_result(
-                    True,
-                    "risk_level",
-                    "60% bonds (AGG), 40% equities (SPY)",
-            )
-        elif risk_level == "Medium":
-            return build_validation_result(
-                    True,
-                    "risk_level",
-                    "40% bonds (AGG), 60% equities (SPY)",
-            )
-        elif risk_level == "High":
-            return build_validation_result(
-                    True,
-                    "risk_level",
-                    "20% bonds (AGG), 80% equities (SPY)",
-            )
-        
-        return build_validation_result(True, None, None)
+    if risk_level == "None":
+        initial_recommendation = "100% bonds (AGG), 0% equities (SPY)"
+    elif risk_level == "Very Low":
+        initial_recommendation = "80% bonds (AGG), 20% equities (SPY)"
+    elif risk_level == "Low":
+        initial_recommendation = "60% bonds (AGG), 40% equities (SPY)"
+    elif risk_level == "Medium":
+        initial_recommendation = "40% bonds (AGG), 60% equities (SPY)"
+    elif risk_level == "High":
+        initial_recommendation = "20% bonds (AGG), 80% equities (SPY)"
 
     ### YOUR FINAL INVESTMENT RECOMMENDATION CODE ENDS HERE ###
 
@@ -194,7 +169,6 @@ def recommend_portfolio(intent_request):
         },
     )
 
-
 ### Intents Dispatcher ###
 def dispatch(intent_request):
     """
@@ -208,7 +182,6 @@ def dispatch(intent_request):
         return recommend_portfolio(intent_request)
 
     raise Exception("Intent with name " + intent_name + " not supported")
-
 
 ### Main Handler ###
 def lambda_handler(event, context):
